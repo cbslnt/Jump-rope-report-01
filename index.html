@@ -30,6 +30,23 @@
       opacity: 1;
       transform: scale(1);
     }
+
+    /* 批量顯示證書的樣式 (列表視圖) */
+    .certificate-batch-item {
+        background: white;
+        border: 4px solid #667eea;
+        width: 210mm; /* A4 寬度 */
+        max-width: 100%;
+        aspect-ratio: 210/297; /* A4 比例 */
+        margin: 0 auto 40px auto; /* 證書之間的間距 */
+        padding: 40px;
+        box-sizing: border-box;
+        position: relative;
+        border-radius: 16px;
+        box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+        page-break-after: always; /* 確保列印時分頁 */
+        break-after: page;
+    }
     
     .toast {
       position: fixed;
@@ -164,17 +181,21 @@
     @media print {
       @page {
         size: A4;
-        margin: 1cm;
+        margin: 0; /* 移除瀏覽器預設頁面邊距，由證書本身控制 */
       }
       
-      body, html, .app-wrapper {
+      body, html {
         height: auto !important;
         overflow: visible !important;
         background: white !important;
+        margin: 0 !important;
+        padding: 0 !important;
       }
       
       .app-wrapper {
         background: none !important;
+        overflow: visible !important;
+        height: auto !important;
       }
 
       .no-print {
@@ -187,8 +208,8 @@
         print-color-adjust: exact !important;
       }
 
-      /* 確保報告容器在列印時正確顯示且寬度正確 */
-      #allReportsContainer, #statisticsContainer {
+      /* 確保報告容器在列印時正確顯示 */
+      #allReportsContainer {
         display: block !important;
         box-shadow: none !important;
         padding: 0 !important;
@@ -196,19 +217,36 @@
         width: 100% !important;
         max-width: none !important;
         border: none !important;
+        background: none !important;
       }
       
-      /* 讓列表項目不要被分頁切斷 */
-      .report-card {
+      /* 確保報告列表可見 */
+      #reportsList {
+        display: block !important;
+      }
+      
+      /* 批量證書的列印樣式 */
+      .certificate-batch-item {
+        margin: 0 auto !important;
+        border: 4px solid #667eea !important;
+        width: 100% !important; /* 填滿 A4 寬度 */
+        height: 297mm; /* 強制 A4 高度 */
+        max-width: none !important;
+        box-shadow: none !important;
+        border-radius: 0 !important;
         break-inside: avoid;
         page-break-inside: avoid;
-        border: 1px solid #ddd;
-        margin-bottom: 12px;
-        box-shadow: none !important;
+        page-break-after: always; /* 每一張證書後強制分頁 */
+        break-after: page;
       }
 
       /* 隱藏其他不相關的視圖 */
-      #expectationForm, #evaluationForm, #actionButtons, #certificateButtons {
+      #expectationForm, #evaluationForm, #actionButtons, #certificateButtons, #statisticsContainer {
+        display: none !important;
+      }
+      
+      /* 隱藏報告容器內的標題和按鈕 */
+      #allReportsContainer > .no-print {
         display: none !important;
       }
     }
@@ -300,7 +338,7 @@
     <div id="allReportsContainer" class="bg-white rounded-2xl shadow-2xl p-8 mb-6" style="display: none;">
      <div class="text-center mb-4 no-print"><span class="jump-rope-character text-5xl">📚</span> <span class="star-decoration text-3xl ml-2">👨‍🏫</span> <span class="jump-rope-character text-5xl ml-2">📊</span>
      </div>
-     <h2 class="text-3xl font-bold text-center mb-6" style="color: #2d3748;">全部學生報告</h2><!-- 控制面板 -->
+     <h2 class="text-3xl font-bold text-center mb-6 no-print" style="color: #2d3748;">全部學生報告</h2><!-- 控制面板 -->
      <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6 no-print">
       <div><label for="reportsClassFilter" class="block text-sm font-semibold text-gray-700 mb-2">選擇班級</label> <select id="reportsClassFilter" class="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:border-purple-500 focus:outline-none transition"> <option value="all">全部班級</option> </select>
       </div>
@@ -308,11 +346,11 @@
       </div>
      </div>
      <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6 no-print">
-        <button id="printReportsButton" class="w-full bg-green-500 text-white font-bold py-4 rounded-lg shadow-lg transition transform hover:scale-105"> 🖨️ 列印全部報告 (A4) </button> 
+        <button id="printReportsButton" class="w-full bg-green-500 text-white font-bold py-4 rounded-lg shadow-lg transition transform hover:scale-105"> 🖨️ 列印全部證書 (A4) </button> 
         <button id="backFromReportsButton" class="w-full text-white font-bold py-4 rounded-lg shadow-lg transition transform hover:scale-105" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);"> 返回表單 </button>
      </div>
-     <!-- 報告列表 -->
-     <div id="reportsList" class="space-y-4 mb-6"><!-- 報告卡片動態生成 --></div>
+     <!-- 報告列表 (這裡會顯示完整的 A4 證書) -->
+     <div id="reportsList" class="space-y-4 mb-6"></div>
     </div>
     
     <!-- 統計資料容器 -->
@@ -995,38 +1033,95 @@
         records.forEach(record => {
             if (!record || !record.actual || !record.expected) return;
 
-            const card = document.createElement('div');
-            card.className = 'report-card bg-white p-4 rounded-lg shadow border-l-4 border-purple-500 flex flex-col md:flex-row justify-between items-center';
+            // 計算徽章
+            const pBadge = getAchievementBadge(record.expected.practice, record.actual.practice);
+            const gBadge = getAchievementBadge(record.expected.game, record.actual.game);
+            const tBadge = getAchievementBadge(record.expected.teamwork, record.actual.teamwork);
+
+            // 生成完整的證書 HTML (批量視圖)
+            const certHTML = document.createElement('div');
+            certHTML.className = 'certificate-batch-item';
             
-            card.innerHTML = `
-                <div class="mb-4 md:mb-0 w-full md:w-auto">
-                    <div class="flex items-center">
-                        <span class="font-bold text-lg text-gray-800 mr-2">${record.student_name || '未命名'}</span>
-                        <span class="text-sm bg-gray-100 text-gray-600 px-2 py-1 rounded">${record.class_name || '-'}</span>
-                    </div>
-                    <div class="text-xs text-gray-500 mt-1">${record.date || ''}</div>
+            certHTML.innerHTML = `
+                <div class="text-center mb-6">
+                 <div class="text-6xl mb-2"><span class="jump-rope-character">🤸</span> <span class="rope-animation mx-3">➰</span> <span class="jump-rope-character">🏃</span>
+                 </div>
+                 <div class="text-5xl mb-4"><span class="star-decoration">⭐</span> <span class="mx-2">🏆</span> <span class="star-decoration">⭐</span>
+                 </div>
+                 <h2 class="text-5xl font-bold mb-2" style="color: #667eea;">跳繩小達人</h2>
+                 <div class="text-lg text-gray-600">
+                  表現證書
+                 </div>
                 </div>
-                
-                <div class="flex space-x-4 md:space-x-8 w-full md:w-auto justify-between md:justify-end">
-                    <div class="text-center">
-                        <div class="text-xs text-gray-500">練習</div>
-                        <div class="font-semibold text-purple-600">${record.actual.practice}<span class="text-xs text-gray-400">/${record.expected.practice}</span></div>
-                    </div>
-                    <div class="text-center">
-                        <div class="text-xs text-gray-500">遊戲</div>
-                        <div class="font-semibold text-blue-600">${record.actual.game}<span class="text-xs text-gray-400">/${record.expected.game}</span></div>
-                    </div>
-                    <div class="text-center">
-                        <div class="text-xs text-gray-500">合作</div>
-                        <div class="font-semibold text-green-600">${record.actual.teamwork}<span class="text-xs text-gray-400">/${record.expected.teamwork}</span></div>
-                    </div>
-                    <div class="text-center pl-4 border-l border-gray-200">
-                        <div class="text-xs text-gray-500">總分</div>
-                        <div class="font-bold text-gray-800 text-lg">${record.actual.total}</div>
-                    </div>
+                <div class="border-t-2 border-b-2 border-purple-200 py-6 mb-6">
+                 <div class="text-center mb-4">
+                  <div class="text-3xl font-bold" style="color: #2d3748;">
+                   ${record.student_name || '未命名'}
+                  </div>
+                  <div class="text-lg text-gray-600 mt-1">
+                   班級：${record.class_name || '-'}
+                  </div>
+                 </div>
+                 <div class="grid grid-cols-3 gap-4 mt-6"> <!-- 強制 3 欄 -->
+                  <div class="bg-purple-50 rounded-lg p-4 text-center">
+                   <div class="text-2xl mb-2"><span class="jump-rope-character">🏃</span>
+                   </div>
+                   <div class="font-semibold text-gray-700 mb-2">
+                    練習投入度
+                   </div>
+                   <div class="text-sm text-gray-600">
+                    期望：<span class="font-bold">${record.expected.practice}</span> → 實際：<span class="font-bold text-purple-600">${record.actual.practice}</span>
+                   </div>
+                   <div class="achievement-badge ${pBadge.class} mt-2">
+                    ${pBadge.text}
+                   </div>
+                  </div>
+                  <div class="bg-blue-50 rounded-lg p-4 text-center">
+                   <div class="text-2xl mb-2"><span class="star-decoration">🎮</span>
+                   </div>
+                   <div class="font-semibold text-gray-700 mb-2">
+                    遊戲參與度
+                   </div>
+                   <div class="text-sm text-gray-600">
+                    期望：<span class="font-bold">${record.expected.game}</span> → 實際：<span class="font-bold text-blue-600">${record.actual.game}</span>
+                   </div>
+                   <div class="achievement-badge ${gBadge.class} mt-2">
+                    ${gBadge.text}
+                   </div>
+                  </div>
+                  <div class="bg-green-50 rounded-lg p-4 text-center">
+                   <div class="text-2xl mb-2"><span class="jump-rope-character">🤝</span>
+                   </div>
+                   <div class="font-semibold text-gray-700 mb-2">
+                    團隊合作
+                   </div>
+                   <div class="text-sm text-gray-600">
+                    期望：<span class="font-bold">${record.expected.teamwork}</span> → 實際：<span class="font-bold text-green-600">${record.actual.teamwork}</span>
+                   </div>
+                   <div class="achievement-badge ${tBadge.class} mt-2">
+                    ${tBadge.text}
+                   </div>
+                  </div>
+                 </div>
+                 <div class="bg-gradient-to-r from-purple-100 to-blue-100 rounded-lg p-4 mt-6 text-center">
+                  <div class="font-bold text-gray-700 mb-2">
+                   綜合評分
+                  </div>
+                  <div class="text-2xl">
+                   期望：<span class="font-bold text-purple-600">${record.expected.total}</span> → 實際：<span class="font-bold text-blue-600">${record.actual.total}</span>
+                  </div>
+                 </div>
+                </div>
+                <div class="text-center text-gray-600">
+                 <div class="text-sm">
+                  證書日期
+                 </div>
+                 <div class="font-semibold">
+                  ${record.date || ''}
+                 </div>
                 </div>
             `;
-            container.appendChild(card);
+            container.appendChild(certHTML);
         });
     }
 
