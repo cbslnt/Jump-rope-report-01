@@ -1,0 +1,998 @@
+<!doctype html>
+<html lang="zh-TW" class="h-full">
+ <head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>跳繩課堂表現證書</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- 移除平台專屬 SDK，改為獨立運作 -->
+  <script src="https://html2canvas.hertzen.com/dist/html2canvas.min.js"></script>
+  <style>
+    body {
+      box-sizing: border-box;
+      font-family: "PingFang TC", "Microsoft JhengHei", sans-serif;
+    }
+    
+    .app-wrapper {
+      min-height: 100%;
+      overflow: auto;
+      /* 設定預設背景色 */
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    }
+    
+    .certificate {
+      opacity: 0;
+      transform: scale(0.9);
+      transition: all 0.5s ease;
+    }
+    
+    .certificate.show {
+      opacity: 1;
+      transform: scale(1);
+    }
+    
+    .toast {
+      position: fixed;
+      bottom: 20px;
+      right: 20px;
+      background: #48bb78;
+      color: white;
+      padding: 16px 24px;
+      border-radius: 8px;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+      opacity: 0;
+      transform: translateY(20px);
+      transition: all 0.3s ease;
+      z-index: 1000;
+      font-weight: 500;
+    }
+    
+    .toast.show {
+      opacity: 1;
+      transform: translateY(0);
+    }
+    
+    .achievement-badge {
+      display: inline-block;
+      padding: 4px 12px;
+      border-radius: 12px;
+      font-size: 0.85rem;
+      font-weight: 600;
+      margin-top: 4px;
+    }
+    
+    .jump-rope-character {
+      display: inline-block;
+      animation: jump 1s ease-in-out infinite;
+    }
+    
+    @keyframes jump {
+      0%, 100% { transform: translateY(0) rotate(0deg); }
+      25% { transform: translateY(-15px) rotate(-5deg); }
+      50% { transform: translateY(-25px) rotate(0deg); }
+      75% { transform: translateY(-15px) rotate(5deg); }
+    }
+    
+    .rope-animation {
+      display: inline-block;
+      animation: swing 1s ease-in-out infinite;
+    }
+    
+    @keyframes swing {
+      0%, 100% { transform: rotate(0deg); }
+      50% { transform: rotate(180deg); }
+    }
+    
+    .star-decoration {
+      display: inline-block;
+      animation: twinkle 2s ease-in-out infinite;
+    }
+    
+    @keyframes twinkle {
+      0%, 100% { 
+        transform: scale(1);
+        opacity: 1;
+      }
+      50% { 
+        transform: scale(1.3);
+        opacity: 0.7;
+      }
+    }
+    
+    .badge-exceeded {
+      background: linear-gradient(135deg, #f6d365 0%, #fda085 100%);
+      color: #744210;
+    }
+    
+    .badge-met {
+      background: linear-gradient(135deg, #a8edea 0%, #fed6e3 100%);
+      color: #2d5f5d;
+    }
+    
+    .badge-close {
+      background: linear-gradient(135deg, #e0c3fc 0%, #8ec5fc 100%);
+      color: #4a5568;
+    }
+
+    .badge-improve {
+        background: #e2e8f0;
+        color: #4a5568;
+    }
+    
+    .stat-card {
+      transition: transform 0.2s ease;
+    }
+    
+    .stat-card:hover {
+      transform: translateY(-2px);
+    }
+    
+    .progress-bar {
+      transition: width 0.6s ease;
+    }
+    
+    input[type="range"] {
+      -webkit-appearance: none;
+      appearance: none;
+      width: 100%;
+      height: 8px;
+      border-radius: 4px;
+      outline: none;
+      background: #e2e8f0; /* Fallback */
+    }
+    
+    input[type="range"]::-webkit-slider-thumb {
+      -webkit-appearance: none;
+      appearance: none;
+      width: 20px;
+      height: 20px;
+      border-radius: 50%;
+      cursor: pointer;
+      background: #667eea; /* Default color */
+    }
+    
+    input[type="range"]::-moz-range-thumb {
+      width: 20px;
+      height: 20px;
+      border-radius: 50%;
+      cursor: pointer;
+      border: none;
+      background: #667eea; /* Default color */
+    }
+    
+    @media print {
+      .no-print {
+        display: none !important;
+      }
+      
+      .report-card {
+        page-break-after: always;
+        box-shadow: none !important;
+        margin: 0 !important;
+        border: 1px solid #ddd;
+      }
+      
+      body {
+        background: white !important;
+      }
+      
+      .app-wrapper {
+        background: white !important;
+      }
+    }
+  </style>
+  <style>@view-transition { navigation: auto; }</style>
+ </head>
+ <body class="h-full">
+  <div class="app-wrapper h-full w-full">
+   <div class="container mx-auto px-4 py-8" style="max-width: 900px;"><!-- Toast 通知 -->
+    <div id="toast" class="toast"></div><!-- 第一階段：課前期望表單 -->
+    <div id="expectationForm" class="bg-white rounded-2xl shadow-2xl p-8 mb-6 no-print">
+     <div class="text-center mb-4"><span class="jump-rope-character text-6xl">🤸</span> <span class="rope-animation text-4xl ml-2">➰</span> <span class="star-decoration text-3xl ml-2">✨</span>
+     </div>
+     <h1 id="formTitle" class="text-4xl font-bold text-center mb-2" style="color: #2d3748;">跳繩課堂 - 課前期望</h1>
+     <p class="text-center text-gray-600 mb-8">設定你今天的學習目標，課後再來檢視成果！</p>
+     <form id="expectationFormElement">
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+       <div><label for="studentName" class="block text-sm font-semibold text-gray-700 mb-2">學生姓名 *</label> <input type="text" id="studentName" required class="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:border-purple-500 focus:outline-none transition">
+       </div>
+       <div><label for="className" class="block text-sm font-semibold text-gray-700 mb-2">班級 *</label> <input type="text" id="className" required class="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:border-purple-500 focus:outline-none transition">
+       </div>
+      </div>
+      <div class="mb-6"><label for="date" class="block text-sm font-semibold text-gray-700 mb-2">日期 *</label> <input type="date" id="date" required class="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:border-purple-500 focus:outline-none transition">
+      </div>
+      <div class="bg-purple-50 rounded-xl p-6 mb-6">
+       <h3 class="text-lg font-bold text-purple-900 mb-4">📊 設定你的課前期望（1-10分）</h3>
+       <div class="mb-6"><label for="expectedPractice" class="block text-sm font-semibold text-gray-700 mb-2"> 🏃 練習投入度：<span id="expectedPracticeValue" class="text-purple-600 font-bold">5</span> </label> <input type="range" id="expectedPractice" min="1" max="10" value="5" class="w-full" style="background: #e9d5ff;">
+       </div>
+       <div class="mb-6"><label for="expectedGame" class="block text-sm font-semibold text-gray-700 mb-2"> 🎮 遊戲參與度：<span id="expectedGameValue" class="text-purple-600 font-bold">5</span> </label> <input type="range" id="expectedGame" min="1" max="10" value="5" class="w-full" style="background: #e9d5ff;">
+       </div>
+       <div><label for="expectedTeamwork" class="block text-sm font-semibold text-gray-700 mb-2"> 🤝 團隊合作：<span id="expectedTeamworkValue" class="text-purple-600 font-bold">5</span> </label> <input type="range" id="expectedTeamwork" min="1" max="10" value="5" class="w-full" style="background: #e9d5ff;">
+       </div>
+      </div><button type="submit" id="expectationSubmitButton" class="w-full text-white font-bold py-4 rounded-lg shadow-lg transition transform hover:scale-105" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);"> 記錄我的期望 ✨ </button>
+     </form>
+    </div>
+    
+    <!-- 查看統計按鈕 -->
+    <div id="actionButtons" class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6 no-print">
+        <button id="viewStatsButton" class="w-full bg-white text-purple-700 font-bold py-4 rounded-lg shadow-lg transition transform hover:scale-105"> 📈 查看班級統計 </button> 
+        <button id="viewAllReportsButton" class="w-full bg-white text-purple-700 font-bold py-4 rounded-lg shadow-lg transition transform hover:scale-105"> 📋 查看全部學生報告 </button>
+    </div>
+    
+    <!-- 第二階段：課後自我評估表單 -->
+    <div id="evaluationForm" class="bg-white rounded-2xl shadow-2xl p-8 mb-6 no-print" style="display: none;">
+     <div class="text-center mb-4"><span class="jump-rope-character text-6xl">🏃</span> <span class="rope-animation text-4xl ml-2">➰</span> <span class="text-4xl ml-2">💪</span>
+     </div>
+     <h2 class="text-3xl font-bold text-center mb-2" style="color: #2d3748;">課後自我評估</h2>
+     <p class="text-center text-gray-600 mb-6">課堂結束了！來看看你的實際表現如何</p>
+     <div class="bg-blue-50 rounded-xl p-6 mb-6">
+      <h3 class="text-lg font-bold text-blue-900 mb-3">📝 你的課前期望</h3>
+      <div class="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm">
+       <div class="bg-white rounded-lg p-3">
+        <div class="text-gray-600">
+         姓名
+        </div>
+        <div id="reminderName" class="font-bold text-gray-800"></div>
+       </div>
+       <div class="bg-white rounded-lg p-3">
+        <div class="text-gray-600">
+         班級
+        </div>
+        <div id="reminderClass" class="font-bold text-gray-800"></div>
+       </div>
+       <div class="bg-white rounded-lg p-3">
+        <div class="text-gray-600">
+         練習 / 遊戲 / 合作
+        </div>
+        <div class="font-bold text-gray-800"><span id="reminderPractice"></span> / <span id="reminderGame"></span> / <span id="reminderTeamwork"></span>
+        </div>
+       </div>
+      </div>
+     </div>
+     <form id="evaluationFormElement">
+      <div class="bg-green-50 rounded-xl p-6 mb-6">
+       <h3 class="text-lg font-bold text-green-900 mb-4">⭐ 你的實際表現（1-10分）</h3>
+       <div class="mb-6"><label for="actualPractice" class="block text-sm font-semibold text-gray-700 mb-2"> 🏃 練習投入度：<span id="actualPracticeValue" class="text-green-600 font-bold">5</span> </label> <input type="range" id="actualPractice" min="1" max="10" value="5" class="w-full" style="background: #d1fae5;">
+       </div>
+       <div class="mb-6"><label for="actualGame" class="block text-sm font-semibold text-gray-700 mb-2"> 🎮 遊戲參與度：<span id="actualGameValue" class="text-green-600 font-bold">5</span> </label> <input type="range" id="actualGame" min="1" max="10" value="5" class="w-full" style="background: #d1fae5;">
+       </div>
+       <div><label for="actualTeamwork" class="block text-sm font-semibold text-gray-700 mb-2"> 🤝 團隊合作：<span id="actualTeamworkValue" class="text-green-600 font-bold">5</span> </label> <input type="range" id="actualTeamwork" min="1" max="10" value="5" class="w-full" style="background: #d1fae5;">
+       </div>
+      </div>
+      <div class="grid grid-cols-1 gap-4">
+        <button type="submit" id="evaluationSubmitButton" class="w-full text-white font-bold py-4 rounded-lg shadow-lg transition transform hover:scale-105" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);"> 生成證書 🎉 </button>
+        <button type="button" id="cancelEvaluationButton" class="w-full text-gray-600 font-bold py-3 rounded-lg border-2 border-gray-300 hover:bg-gray-100 transition"> 返回主選單 </button>
+      </div>
+     </form>
+    </div><!-- 全部學生報告容器 -->
+    <div id="allReportsContainer" class="bg-white rounded-2xl shadow-2xl p-8 mb-6 no-print" style="display: none;">
+     <div class="text-center mb-4"><span class="jump-rope-character text-5xl">📚</span> <span class="star-decoration text-3xl ml-2">👨‍🏫</span> <span class="jump-rope-character text-5xl ml-2">📊</span>
+     </div>
+     <h2 class="text-3xl font-bold text-center mb-6" style="color: #2d3748;">全部學生報告</h2><!-- 控制面板 -->
+     <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+      <div><label for="reportsClassFilter" class="block text-sm font-semibold text-gray-700 mb-2">選擇班級</label> <select id="reportsClassFilter" class="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:border-purple-500 focus:outline-none transition"> <option value="all">全部班級</option> </select>
+      </div>
+      <div><label for="sortOption" class="block text-sm font-semibold text-gray-700 mb-2">排序方式</label> <select id="sortOption" class="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:border-purple-500 focus:outline-none transition"> <option value="date">日期（最新優先）</option> <option value="name">姓名（A-Z）</option> <option value="total">總分（高至低）</option> <option value="achievement">達成率（高至低）</option> </select>
+      </div>
+     </div><button id="printReportsButton" class="w-full bg-green-500 text-white font-bold py-4 rounded-lg shadow-lg transition transform hover:scale-105 mb-6"> 🖨️ 列印全部報告 </button> <button id="backFromReportsButton" class="w-full text-white font-bold py-4 rounded-lg shadow-lg transition transform hover:scale-105 mb-6" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);"> 返回表單 </button>
+     <!-- 報告列表 -->
+     <div id="reportsList" class="space-y-4 mb-6"><!-- 報告卡片動態生成 --></div>
+    </div>
+    
+    <!-- 統計資料容器 -->
+    <div id="statisticsContainer" class="bg-white rounded-2xl shadow-2xl p-8 mb-6 no-print" style="display: none;">
+     <div class="text-center mb-4"><span class="jump-rope-character text-5xl">👥</span> <span class="star-decoration text-3xl ml-2">📈</span> <span class="jump-rope-character text-5xl ml-2">📋</span>
+     </div>
+     <h2 class="text-3xl font-bold text-center mb-6" style="color: #2d3748;">班級統計資料</h2><!-- 班級篩選 -->
+     <div class="mb-6"><label for="classFilter" class="block text-sm font-semibold text-gray-700 mb-2">選擇班級</label> <select id="classFilter" class="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:border-purple-500 focus:outline-none transition"> <option value="all">全部班級</option> </select>
+     </div><!-- 統計摘要卡片 -->
+     <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
+      <div class="stat-card bg-gradient-to-br from-blue-500 to-blue-600 rounded-xl p-6 text-white shadow-lg">
+       <div class="text-sm opacity-90 mb-1">
+        總學生數
+       </div>
+       <div id="totalStudents" class="text-4xl font-bold">
+        0
+       </div>
+      </div>
+      <div class="stat-card bg-gradient-to-br from-green-500 to-green-600 rounded-xl p-6 text-white shadow-lg">
+       <div class="text-sm opacity-90 mb-1">
+        平均總分 (實際)
+       </div>
+       <div id="avgTotal" class="text-4xl font-bold">
+        0.0
+       </div>
+      </div>
+      <div class="stat-card bg-gradient-to-br from-purple-500 to-purple-600 rounded-xl p-6 text-white shadow-lg">
+       <div class="text-sm opacity-90 mb-1">
+        目標達成率
+       </div>
+       <div id="achievementRate" class="text-4xl font-bold">
+        0%
+       </div>
+      </div>
+     </div><!-- 各項目平均表現 -->
+     <div class="mb-8">
+      <h3 class="text-xl font-bold text-gray-800 mb-4">各項目平均表現 (實際分數)</h3>
+      <div class="space-y-4">
+       <div>
+        <div class="flex justify-between mb-2"><span class="font-semibold text-gray-700">🏃 練習投入度</span> <span id="avgPractice" class="font-bold text-purple-600">0.0</span>
+        </div>
+        <div class="w-full bg-gray-200 rounded-full h-3 overflow-hidden">
+         <div id="practiceBar" class="progress-bar bg-gradient-to-r from-purple-500 to-purple-600 h-full" style="width: 0%"></div>
+        </div>
+       </div>
+       <div>
+        <div class="flex justify-between mb-2"><span class="font-semibold text-gray-700">🎮 遊戲參與度</span> <span id="avgGame" class="font-bold text-blue-600">0.0</span>
+        </div>
+        <div class="w-full bg-gray-200 rounded-full h-3 overflow-hidden">
+         <div id="gameBar" class="progress-bar bg-gradient-to-r from-blue-500 to-blue-600 h-full" style="width: 0%"></div>
+        </div>
+       </div>
+       <div>
+        <div class="flex justify-between mb-2"><span class="font-semibold text-gray-700">🤝 團隊合作</span> <span id="avgTeamwork" class="font-bold text-green-600">0.0</span>
+        </div>
+        <div class="w-full bg-gray-200 rounded-full h-3 overflow-hidden">
+         <div id="teamworkBar" class="progress-bar bg-gradient-to-r from-green-500 to-green-600 h-full" style="width: 0%"></div>
+        </div>
+       </div>
+      </div>
+     </div><!-- 期望 vs 實際對比 -->
+     <div class="mb-6">
+      <h3 class="text-xl font-bold text-gray-800 mb-4">期望 vs 實際對比 (班級平均)</h3>
+      <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+       <div class="bg-purple-50 rounded-lg p-4">
+        <div class="text-center font-semibold text-gray-700 mb-3">
+         🏃 練習投入度
+        </div>
+        <div class="flex justify-around">
+         <div class="text-center">
+          <div class="text-xs text-gray-600 mb-1">
+           期望
+          </div>
+          <div id="expectedPracticeStat" class="text-2xl font-bold text-purple-600">
+           0.0
+          </div>
+         </div>
+         <div class="text-center">
+          <div class="text-xs text-gray-600 mb-1">
+           實際
+          </div>
+          <div id="actualPracticeStat" class="text-2xl font-bold text-purple-800">
+           0.0
+          </div>
+         </div>
+        </div>
+       </div>
+       <div class="bg-blue-50 rounded-lg p-4">
+        <div class="text-center font-semibold text-gray-700 mb-3">
+         🎮 遊戲參與度
+        </div>
+        <div class="flex justify-around">
+         <div class="text-center">
+          <div class="text-xs text-gray-600 mb-1">
+           期望
+          </div>
+          <div id="expectedGameStat" class="text-2xl font-bold text-blue-600">
+           0.0
+          </div>
+         </div>
+         <div class="text-center">
+          <div class="text-xs text-gray-600 mb-1">
+           實際
+          </div>
+          <div id="actualGameStat" class="text-2xl font-bold text-blue-800">
+           0.0
+          </div>
+         </div>
+        </div>
+       </div>
+       <div class="bg-green-50 rounded-lg p-4">
+        <div class="text-center font-semibold text-gray-700 mb-3">
+         🤝 團隊合作
+        </div>
+        <div class="flex justify-around">
+         <div class="text-center">
+          <div class="text-xs text-gray-600 mb-1">
+           期望
+          </div>
+          <div id="expectedTeamworkStat" class="text-2xl font-bold text-green-600">
+           0.0
+          </div>
+         </div>
+         <div class="text-center">
+          <div class="text-xs text-gray-600 mb-1">
+           實際
+          </div>
+          <div id="actualTeamworkStat" class="text-2xl font-bold text-green-800">
+           0.0
+          </div>
+         </div>
+        </div>
+       </div>
+      </div>
+     </div><button id="backToFormButton" class="w-full text-white font-bold py-4 rounded-lg shadow-lg transition transform hover:scale-105" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);"> 返回表單 </button>
+    </div><!-- 證書顯示 -->
+    <div id="certificate" class="certificate rounded-2xl shadow-2xl mb-6 no-print" style="background: white; border: 4px solid #667eea; width: 210mm; max-width: 100%; aspect-ratio: 210/297; margin-left: auto; margin-right: auto; padding: 40px; box-sizing: border-box; overflow-y: auto; position: relative; display: none;">
+     <div class="text-center mb-6">
+      <div class="text-6xl mb-2"><span class="jump-rope-character">🤸</span> <span class="rope-animation mx-3">➰</span> <span class="jump-rope-character">🏃</span>
+      </div>
+      <div class="text-5xl mb-4"><span class="star-decoration">⭐</span> <span class="mx-2">🏆</span> <span class="star-decoration">⭐</span>
+      </div>
+      <h2 id="certificateTitle" class="text-5xl font-bold mb-2" style="color: #667eea;">跳繩小達人</h2>
+      <div class="text-lg text-gray-600">
+       表現證書
+      </div>
+     </div>
+     <div class="border-t-2 border-b-2 border-purple-200 py-6 mb-6">
+      <div class="text-center mb-4">
+       <div class="text-3xl font-bold" id="certificateStudentName" style="color: #2d3748;">
+        學生姓名
+       </div>
+       <div class="text-lg text-gray-600 mt-1" id="certificateStudentClass">
+        班級：
+       </div>
+      </div>
+      <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mt-6">
+       <div class="bg-purple-50 rounded-lg p-4 text-center">
+        <div class="text-2xl mb-2"><span class="jump-rope-character">🏃</span>
+        </div>
+        <div class="font-semibold text-gray-700 mb-2">
+         練習投入度
+        </div>
+        <div class="text-sm text-gray-600">
+         期望：<span id="expectedPracticeDisplay" class="font-bold">0</span> → 實際：<span id="actualPracticeDisplay" class="font-bold text-purple-600">0</span>
+        </div>
+        <div id="practiceBadge" class="achievement-badge badge-met mt-2">
+         達成目標 ✓
+        </div>
+       </div>
+       <div class="bg-blue-50 rounded-lg p-4 text-center">
+        <div class="text-2xl mb-2"><span class="star-decoration">🎮</span>
+        </div>
+        <div class="font-semibold text-gray-700 mb-2">
+         遊戲參與度
+        </div>
+        <div class="text-sm text-gray-600">
+         期望：<span id="expectedGameDisplay" class="font-bold">0</span> → 實際：<span id="actualGameDisplay" class="font-bold text-blue-600">0</span>
+        </div>
+        <div id="gameBadge" class="achievement-badge badge-met mt-2">
+         達成目標 ✓
+        </div>
+       </div>
+       <div class="bg-green-50 rounded-lg p-4 text-center">
+        <div class="text-2xl mb-2"><span class="jump-rope-character">🤝</span>
+        </div>
+        <div class="font-semibold text-gray-700 mb-2">
+         團隊合作
+        </div>
+        <div class="text-sm text-gray-600">
+         期望：<span id="expectedTeamworkDisplay" class="font-bold">0</span> → 實際：<span id="actualTeamworkDisplay" class="font-bold text-green-600">0</span>
+        </div>
+        <div id="teamworkBadge" class="achievement-badge badge-met mt-2">
+         達成目標 ✓
+        </div>
+       </div>
+      </div>
+      <div class="bg-gradient-to-r from-purple-100 to-blue-100 rounded-lg p-4 mt-6 text-center">
+       <div class="font-bold text-gray-700 mb-2">
+        綜合評分
+       </div>
+       <div class="text-2xl">
+        期望：<span id="totalExpected" class="font-bold text-purple-600">0.0</span> → 實際：<span id="totalActual" class="font-bold text-blue-600">0.0</span>
+       </div>
+      </div>
+     </div>
+     <div class="text-center text-gray-600">
+      <div class="text-sm">
+       證書日期
+      </div>
+      <div id="certificateDate" class="font-semibold">
+       2024-01-01
+      </div>
+     </div>
+    </div><!-- 證書操作按鈕 -->
+    <div id="certificateButtons" class="no-print" style="display: none;"><button id="downloadCertificateButton" class="w-full font-bold py-4 rounded-lg shadow-lg transition transform hover:scale-105 mb-4 text-white" style="background: linear-gradient(135deg, #10b981 0%, #059669 100%);"> 💾 下載證書圖片 </button> <button id="newCertificateButton" class="w-full font-bold py-4 rounded-lg shadow-lg transition transform hover:scale-105 bg-white" style="color: #667eea; border: 2px solid #667eea;"> ➕ 生成新證書 </button>
+    </div>
+   </div>
+  </div>
+  <script>
+    let currentRecords = [];
+    let tempExpectationData = null;
+    let selectedClass = 'all';
+    let reportsSelectedClass = 'all';
+    let sortOption = 'date';
+    
+    // 獨立版設定：不再依賴 window.elementSdk
+    const defaultConfig = {
+      primary_action_color: "#667eea",
+      secondary_action_color: "#764ba2"
+    };
+    
+    // 本地儲存金鑰
+    const STORAGE_KEY = 'jump_rope_app_data';
+
+    function initApp() {
+      // 載入本地資料
+      loadDataFromStorage();
+
+      // 設定今天的日期
+      const today = new Date().toISOString().split('T')[0];
+      const dateEl = document.getElementById('date');
+      if (dateEl) dateEl.value = today;
+      
+      // 設定滑桿即時顯示
+      ['expectedPractice', 'expectedGame', 'expectedTeamwork', 'actualPractice', 'actualGame', 'actualTeamwork'].forEach(id => {
+        const slider = document.getElementById(id);
+        const valueDisplay = document.getElementById(id + 'Value');
+        
+        if (slider) {
+            slider.addEventListener('input', (e) => {
+                if (valueDisplay) valueDisplay.textContent = e.target.value;
+            });
+        }
+      });
+      
+      // 綁定表單提交
+      const expForm = document.getElementById('expectationFormElement');
+      if (expForm) expForm.addEventListener('submit', handleExpectationSubmit);
+      
+      const evalForm = document.getElementById('evaluationFormElement');
+      if (evalForm) evalForm.addEventListener('submit', handleEvaluationSubmit);
+      
+      // 綁定按鈕事件
+      const viewStatsBtn = document.getElementById('viewStatsButton');
+      if (viewStatsBtn) viewStatsBtn.addEventListener('click', showStatistics);
+      
+      const viewAllReportsBtn = document.getElementById('viewAllReportsButton');
+      if (viewAllReportsBtn) viewAllReportsBtn.addEventListener('click', showAllReports);
+      
+      ['backToFormButton', 'backFromReportsButton', 'newCertificateButton', 'cancelEvaluationButton'].forEach(id => {
+          const btn = document.getElementById(id);
+          if (btn) btn.addEventListener('click', resetToHome);
+      });
+      
+      const printBtn = document.getElementById('printReportsButton');
+      if (printBtn) printBtn.addEventListener('click', () => window.print());
+      
+      // 綁定下載功能
+      const downloadBtn = document.getElementById('downloadCertificateButton');
+      if (downloadBtn) {
+          downloadBtn.addEventListener('click', async () => {
+            const element = document.getElementById('certificate');
+            const button = document.getElementById('downloadCertificateButton');
+            const originalText = button.textContent;
+            
+            try {
+              button.textContent = "處理中...";
+              const canvas = await html2canvas(element, { scale: 2 });
+              const link = document.createElement('a');
+              link.download = `跳繩證書_${tempExpectationData ? tempExpectationData.name : 'student'}.png`;
+              link.href = canvas.toDataURL();
+              link.click();
+              showToast('證書下載成功！');
+            } catch (err) {
+              console.error(err);
+              showToast('下載失敗，請重試', true);
+            } finally {
+              button.textContent = originalText;
+            }
+          });
+      }
+
+      // 班級篩選事件
+      const classFilter = document.getElementById('classFilter');
+      if (classFilter) {
+          classFilter.addEventListener('change', (e) => {
+            selectedClass = e.target.value;
+            updateStatistics();
+          });
+      }
+      
+      const reportsClassFilter = document.getElementById('reportsClassFilter');
+      if (reportsClassFilter) {
+          reportsClassFilter.addEventListener('change', (e) => {
+            reportsSelectedClass = e.target.value;
+            updateReportsList();
+          });
+      }
+      
+      const sortEl = document.getElementById('sortOption');
+      if (sortEl) {
+          sortEl.addEventListener('change', (e) => {
+            sortOption = e.target.value;
+            updateReportsList();
+          });
+      }
+      
+      // 初始化過濾器
+      updateClassFilter();
+    }
+    
+    // --- 本地儲存邏輯 ---
+    function loadDataFromStorage() {
+        try {
+            const data = localStorage.getItem(STORAGE_KEY);
+            currentRecords = data ? JSON.parse(data) : [];
+        } catch (e) {
+            console.error("讀取資料失敗", e);
+            currentRecords = [];
+        }
+    }
+    
+    function saveDataToStorage() {
+        try {
+            localStorage.setItem(STORAGE_KEY, JSON.stringify(currentRecords));
+        } catch (e) {
+            console.error("儲存資料失敗", e);
+            showToast("儲存失敗，請檢查瀏覽器設定", true);
+        }
+    }
+    
+    // --- UI 邏輯 ---
+
+    function showToast(message, isError = false) {
+      const toast = document.getElementById('toast');
+      toast.textContent = message;
+      toast.style.background = isError ? '#e53e3e' : '#48bb78';
+      toast.classList.add('show');
+      
+      setTimeout(() => {
+        toast.classList.remove('show');
+      }, 3000);
+    }
+
+    function updateClassFilter() {
+      const classFilter = document.getElementById('classFilter');
+      const reportsClassFilter = document.getElementById('reportsClassFilter');
+      
+      if (!classFilter || !reportsClassFilter) return;
+
+      const uniqueClasses = new Set();
+      
+      // Safe check for class_name
+      currentRecords.forEach(record => {
+        if (record && record.class_name) {
+          uniqueClasses.add(record.class_name);
+        }
+      });
+      
+      const currentValue = classFilter.value;
+      const reportsCurrentValue = reportsClassFilter.value;
+      
+      // Reset options but keep "All"
+      classFilter.innerHTML = '<option value="all">全部班級</option>';
+      reportsClassFilter.innerHTML = '<option value="all">全部班級</option>';
+      
+      const sortedClasses = Array.from(uniqueClasses).sort();
+      sortedClasses.forEach(className => {
+        const option1 = document.createElement('option');
+        option1.value = className;
+        option1.textContent = className;
+        classFilter.appendChild(option1);
+        
+        const option2 = document.createElement('option');
+        option2.value = className;
+        option2.textContent = className;
+        reportsClassFilter.appendChild(option2);
+      });
+      
+      if (sortedClasses.includes(currentValue)) classFilter.value = currentValue;
+      if (sortedClasses.includes(reportsCurrentValue)) reportsClassFilter.value = reportsCurrentValue;
+    }
+    
+    function getAchievementBadge(expected, actual) {
+      // Safety check
+      if (expected === undefined || actual === undefined) return { text: '-', class: 'badge-improve' };
+      
+      const diff = actual - expected;
+      if (diff > 0) {
+        return { text: '超越目標 🌟', class: 'badge-exceeded' };
+      } else if (diff === 0) {
+        return { text: '達成目標 ✓', class: 'badge-met' };
+      } else if (diff >= -1) {
+        return { text: '接近目標', class: 'badge-close' };
+      } else {
+        return { text: '繼續努力 💪', class: 'badge-improve' };
+      }
+    }
+
+    function handleExpectationSubmit(e) {
+      e.preventDefault();
+      
+      tempExpectationData = {
+        name: document.getElementById('studentName').value,
+        className: document.getElementById('className').value,
+        date: document.getElementById('date').value,
+        expectedPractice: parseInt(document.getElementById('expectedPractice').value),
+        expectedGame: parseInt(document.getElementById('expectedGame').value),
+        expectedTeamwork: parseInt(document.getElementById('expectedTeamwork').value)
+      };
+
+      // Update Reminder UI in Evaluation Form
+      document.getElementById('reminderName').textContent = tempExpectationData.name;
+      document.getElementById('reminderClass').textContent = tempExpectationData.className;
+      document.getElementById('reminderPractice').textContent = tempExpectationData.expectedPractice;
+      document.getElementById('reminderGame').textContent = tempExpectationData.expectedGame;
+      document.getElementById('reminderTeamwork').textContent = tempExpectationData.expectedTeamwork;
+
+      // Switch views
+      document.getElementById('expectationForm').style.display = 'none';
+      document.getElementById('actionButtons').style.display = 'none';
+      document.getElementById('evaluationForm').style.display = 'block';
+      
+      showToast('期望已記錄，下課後請填寫自評表！');
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+
+    function handleEvaluationSubmit(e) {
+      e.preventDefault();
+      if (!tempExpectationData) return;
+      
+      const actualPractice = parseInt(document.getElementById('actualPractice').value);
+      const actualGame = parseInt(document.getElementById('actualGame').value);
+      const actualTeamwork = parseInt(document.getElementById('actualTeamwork').value);
+      
+      const record = {
+        student_name: tempExpectationData.name,
+        class_name: tempExpectationData.className,
+        date: tempExpectationData.date,
+        expected: {
+          practice: tempExpectationData.expectedPractice,
+          game: tempExpectationData.expectedGame,
+          teamwork: tempExpectationData.expectedTeamwork,
+          total: tempExpectationData.expectedPractice + tempExpectationData.expectedGame + tempExpectationData.expectedTeamwork
+        },
+        actual: {
+          practice: actualPractice,
+          game: actualGame,
+          teamwork: actualTeamwork,
+          total: actualPractice + actualGame + actualTeamwork
+        },
+        created_at: new Date().toISOString()
+      };
+
+      // 儲存資料到本地
+      currentRecords.push(record);
+      saveDataToStorage();
+      
+      // 更新過濾器 (如果有新班級)
+      updateClassFilter();
+      
+      // Update Certificate UI
+      updateCertificateUI(record);
+      
+      // Switch views
+      document.getElementById('evaluationForm').style.display = 'none';
+      document.getElementById('certificate').style.display = 'block';
+      document.getElementById('certificateButtons').style.display = 'block';
+      document.getElementById('certificate').classList.add('show');
+      
+      showToast('恭喜！證書已生成 🎉');
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+
+    function updateCertificateUI(record) {
+      document.getElementById('certificateStudentName').textContent = record.student_name;
+      document.getElementById('certificateStudentClass').textContent = `班級：${record.class_name}`;
+      document.getElementById('certificateDate').textContent = record.date;
+      
+      // Practice
+      document.getElementById('expectedPracticeDisplay').textContent = record.expected.practice;
+      document.getElementById('actualPracticeDisplay').textContent = record.actual.practice;
+      const pBadge = getAchievementBadge(record.expected.practice, record.actual.practice);
+      const pEl = document.getElementById('practiceBadge');
+      pEl.textContent = pBadge.text;
+      pEl.className = `achievement-badge ${pBadge.class} mt-2`;
+
+      // Game
+      document.getElementById('expectedGameDisplay').textContent = record.expected.game;
+      document.getElementById('actualGameDisplay').textContent = record.actual.game;
+      const gBadge = getAchievementBadge(record.expected.game, record.actual.game);
+      const gEl = document.getElementById('gameBadge');
+      gEl.textContent = gBadge.text;
+      gEl.className = `achievement-badge ${gBadge.class} mt-2`;
+
+      // Teamwork
+      document.getElementById('expectedTeamworkDisplay').textContent = record.expected.teamwork;
+      document.getElementById('actualTeamworkDisplay').textContent = record.actual.teamwork;
+      const tBadge = getAchievementBadge(record.expected.teamwork, record.actual.teamwork);
+      const tEl = document.getElementById('teamworkBadge');
+      tEl.textContent = tBadge.text;
+      tEl.className = `achievement-badge ${tBadge.class} mt-2`;
+
+      // Totals
+      document.getElementById('totalExpected').textContent = record.expected.total;
+      document.getElementById('totalActual').textContent = record.actual.total;
+    }
+
+    function showStatistics() {
+      document.getElementById('expectationForm').style.display = 'none';
+      document.getElementById('actionButtons').style.display = 'none';
+      document.getElementById('statisticsContainer').style.display = 'block';
+      
+      try {
+        updateStatistics();
+      } catch (e) {
+        console.error("Error updating statistics", e);
+        showToast("載入統計數據時發生錯誤", true);
+      }
+    }
+
+    function showAllReports() {
+        document.getElementById('expectationForm').style.display = 'none';
+        document.getElementById('actionButtons').style.display = 'none';
+        document.getElementById('allReportsContainer').style.display = 'block';
+        
+        try {
+            updateReportsList();
+        } catch(e) {
+            console.error("Error updating reports list", e);
+            showToast("載入報告時發生錯誤", true);
+        }
+    }
+
+    function resetToHome() {
+      document.getElementById('expectationForm').style.display = 'block';
+      document.getElementById('actionButtons').style.display = 'grid'; 
+      document.getElementById('evaluationForm').style.display = 'none';
+      document.getElementById('certificate').style.display = 'none';
+      document.getElementById('certificateButtons').style.display = 'none';
+      document.getElementById('statisticsContainer').style.display = 'none';
+      document.getElementById('allReportsContainer').style.display = 'none';
+      
+      // Reset form values
+      const nameInput = document.getElementById('studentName');
+      if (nameInput) nameInput.value = '';
+      
+      ['expectedPractice', 'expectedGame', 'expectedTeamwork', 'actualPractice', 'actualGame', 'actualTeamwork'].forEach(id => {
+        const input = document.getElementById(id);
+        if (input) input.value = 5;
+        const display = document.getElementById(id + 'Value');
+        if (display) display.textContent = '5';
+      });
+
+      tempExpectationData = null;
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+
+    function updateStatistics() {
+      const records = selectedClass === 'all' 
+        ? currentRecords 
+        : currentRecords.filter(r => r && r.class_name === selectedClass);
+      
+      const total = records.length;
+      document.getElementById('totalStudents').textContent = total;
+
+      if (total === 0) {
+        document.getElementById('avgTotal').textContent = "0.0";
+        document.getElementById('achievementRate').textContent = "0%";
+        document.getElementById('avgPractice').textContent = "0.0";
+        document.getElementById('avgGame').textContent = "0.0";
+        document.getElementById('avgTeamwork').textContent = "0.0";
+        document.getElementById('practiceBar').style.width = "0%";
+        document.getElementById('gameBar').style.width = "0%";
+        document.getElementById('teamworkBar').style.width = "0%";
+        
+        ['expectedPractice', 'actualPractice', 'expectedGame', 'actualGame', 'expectedTeamwork', 'actualTeamwork'].forEach(id => {
+          document.getElementById(id + 'Stat').textContent = "0.0";
+        });
+        return;
+      }
+
+      // Safe Calculations using reduce
+      const sums = records.reduce((acc, r) => {
+        if (!r || !r.actual || !r.expected) return acc;
+
+        return {
+            actualTotal: acc.actualTotal + (r.actual.total || 0),
+            actualPractice: acc.actualPractice + (r.actual.practice || 0),
+            actualGame: acc.actualGame + (r.actual.game || 0),
+            actualTeamwork: acc.actualTeamwork + (r.actual.teamwork || 0),
+            expectedPractice: acc.expectedPractice + (r.expected.practice || 0),
+            expectedGame: acc.expectedGame + (r.expected.game || 0),
+            expectedTeamwork: acc.expectedTeamwork + (r.expected.teamwork || 0),
+            metGoalCount: acc.metGoalCount + ((r.actual.total || 0) >= (r.expected.total || 0) ? 1 : 0),
+            validCount: acc.validCount + 1
+        };
+      }, { 
+        actualTotal: 0, actualPractice: 0, actualGame: 0, actualTeamwork: 0,
+        expectedPractice: 0, expectedGame: 0, expectedTeamwork: 0, metGoalCount: 0, validCount: 0
+      });
+
+      const validTotal = sums.validCount || 1; 
+
+      document.getElementById('avgTotal').textContent = (sums.actualTotal / validTotal).toFixed(1);
+      document.getElementById('achievementRate').textContent = Math.round((sums.metGoalCount / validTotal) * 100) + "%";
+
+      const avgActPrac = (sums.actualPractice / validTotal).toFixed(1);
+      const avgActGame = (sums.actualGame / validTotal).toFixed(1);
+      const avgActTeam = (sums.actualTeamwork / validTotal).toFixed(1);
+
+      document.getElementById('avgPractice').textContent = avgActPrac;
+      document.getElementById('avgGame').textContent = avgActGame;
+      document.getElementById('avgTeamwork').textContent = avgActTeam;
+
+      document.getElementById('practiceBar').style.width = Math.min((avgActPrac * 10), 100) + "%";
+      document.getElementById('gameBar').style.width = Math.min((avgActGame * 10), 100) + "%";
+      document.getElementById('teamworkBar').style.width = Math.min((avgActTeam * 10), 100) + "%";
+
+      document.getElementById('expectedPracticeStat').textContent = (sums.expectedPractice / validTotal).toFixed(1);
+      document.getElementById('actualPracticeStat').textContent = avgActPrac;
+      document.getElementById('expectedGameStat').textContent = (sums.expectedGame / validTotal).toFixed(1);
+      document.getElementById('actualGameStat').textContent = avgActGame;
+      document.getElementById('expectedTeamworkStat').textContent = (sums.expectedTeamwork / validTotal).toFixed(1);
+      document.getElementById('actualTeamworkStat').textContent = avgActTeam;
+    }
+
+    function updateReportsList() {
+        const container = document.getElementById('reportsList');
+        if (!container) return;
+        container.innerHTML = '';
+        
+        let records = reportsSelectedClass === 'all' 
+            ? [...currentRecords] 
+            : currentRecords.filter(r => r && r.class_name === reportsSelectedClass);
+            
+        // Safe Sorting
+        records.sort((a, b) => {
+            if (!a || !b) return 0;
+            if (sortOption === 'date') return new Date(b.date || 0) - new Date(a.date || 0);
+            if (sortOption === 'name') return (a.student_name || '').localeCompare(b.student_name || '');
+            if (sortOption === 'total') return (b.actual?.total || 0) - (a.actual?.total || 0);
+            if (sortOption === 'achievement') {
+                const rateA = (a.actual?.total || 0) / (a.expected?.total || 1);
+                const rateB = (b.actual?.total || 0) / (b.expected?.total || 1);
+                return rateB - rateA;
+            }
+            return 0;
+        });
+        
+        if (records.length === 0) {
+            container.innerHTML = '<div class="text-center text-gray-500 py-8">暫無資料</div>';
+            return;
+        }
+
+        records.forEach(record => {
+            if (!record || !record.actual || !record.expected) return;
+
+            const card = document.createElement('div');
+            card.className = 'report-card bg-white p-4 rounded-lg shadow border-l-4 border-purple-500 flex flex-col md:flex-row justify-between items-center';
+            
+            card.innerHTML = `
+                <div class="mb-4 md:mb-0 w-full md:w-auto">
+                    <div class="flex items-center">
+                        <span class="font-bold text-lg text-gray-800 mr-2">${record.student_name || '未命名'}</span>
+                        <span class="text-sm bg-gray-100 text-gray-600 px-2 py-1 rounded">${record.class_name || '-'}</span>
+                    </div>
+                    <div class="text-xs text-gray-500 mt-1">${record.date || ''}</div>
+                </div>
+                
+                <div class="flex space-x-4 md:space-x-8 w-full md:w-auto justify-between md:justify-end">
+                    <div class="text-center">
+                        <div class="text-xs text-gray-500">練習</div>
+                        <div class="font-semibold text-purple-600">${record.actual.practice}<span class="text-xs text-gray-400">/${record.expected.practice}</span></div>
+                    </div>
+                    <div class="text-center">
+                        <div class="text-xs text-gray-500">遊戲</div>
+                        <div class="font-semibold text-blue-600">${record.actual.game}<span class="text-xs text-gray-400">/${record.expected.game}</span></div>
+                    </div>
+                    <div class="text-center">
+                        <div class="text-xs text-gray-500">合作</div>
+                        <div class="font-semibold text-green-600">${record.actual.teamwork}<span class="text-xs text-gray-400">/${record.expected.teamwork}</span></div>
+                    </div>
+                    <div class="text-center pl-4 border-l border-gray-200">
+                        <div class="text-xs text-gray-500">總分</div>
+                        <div class="font-bold text-gray-800 text-lg">${record.actual.total}</div>
+                    </div>
+                </div>
+            `;
+            container.appendChild(card);
+        });
+    }
+
+    // Start App
+    initApp();
+  </script>
+ </body>
+</html>
