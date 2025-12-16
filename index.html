@@ -3,9 +3,8 @@
  <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>跳繩課堂表現證書</title>
+  <title>跳繩課堂表現證書 (雲端版)</title>
   <script src="https://cdn.tailwindcss.com"></script>
-  <!-- 移除平台專屬 SDK，改為獨立運作 -->
   <script src="https://html2canvas.hertzen.com/dist/html2canvas.min.js"></script>
   <style>
     body {
@@ -16,7 +15,6 @@
     .app-wrapper {
       min-height: 100%;
       overflow: auto;
-      /* 設定預設背景色 */
       background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
     }
     
@@ -35,16 +33,16 @@
     .certificate-batch-item {
         background: white;
         border: 4px solid #667eea;
-        width: 210mm; /* A4 寬度 */
+        width: 210mm;
         max-width: 100%;
-        aspect-ratio: 210/297; /* A4 比例 */
-        margin: 0 auto 40px auto; /* 證書之間的間距 */
+        aspect-ratio: 210/297;
+        margin: 0 auto 40px auto;
         padding: 40px;
         box-sizing: border-box;
         position: relative;
         border-radius: 16px;
         box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
-        page-break-after: always; /* 確保列印時分頁 */
+        page-break-after: always;
         break-after: page;
     }
     
@@ -155,7 +153,7 @@
       height: 8px;
       border-radius: 4px;
       outline: none;
-      background: #e2e8f0; /* Fallback */
+      background: #e2e8f0;
     }
     
     input[type="range"]::-webkit-slider-thumb {
@@ -165,7 +163,7 @@
       height: 20px;
       border-radius: 50%;
       cursor: pointer;
-      background: #667eea; /* Default color */
+      background: #667eea;
     }
     
     input[type="range"]::-moz-range-thumb {
@@ -174,14 +172,13 @@
       border-radius: 50%;
       cursor: pointer;
       border: none;
-      background: #667eea; /* Default color */
+      background: #667eea;
     }
     
-    /* Print Specific Styles - Fixes for A4 and Visibility */
     @media print {
       @page {
         size: A4;
-        margin: 0; /* 移除瀏覽器預設頁面邊距，由證書本身控制 */
+        margin: 0;
       }
       
       body, html {
@@ -202,13 +199,11 @@
         display: none !important;
       }
       
-      /* 強制列印背景顏色 (Chrome/Safari) */
       * {
         -webkit-print-color-adjust: exact !important;
         print-color-adjust: exact !important;
       }
 
-      /* 確保報告容器在列印時正確顯示 */
       #allReportsContainer {
         display: block !important;
         box-shadow: none !important;
@@ -220,32 +215,28 @@
         background: none !important;
       }
       
-      /* 確保報告列表可見 */
       #reportsList {
         display: block !important;
       }
       
-      /* 批量證書的列印樣式 */
       .certificate-batch-item {
         margin: 0 auto !important;
         border: 4px solid #667eea !important;
-        width: 100% !important; /* 填滿 A4 寬度 */
-        height: 297mm; /* 強制 A4 高度 */
+        width: 100% !important;
+        height: 297mm;
         max-width: none !important;
         box-shadow: none !important;
         border-radius: 0 !important;
         break-inside: avoid;
         page-break-inside: avoid;
-        page-break-after: always; /* 每一張證書後強制分頁 */
+        page-break-after: always;
         break-after: page;
       }
 
-      /* 隱藏其他不相關的視圖 */
       #expectationForm, #evaluationForm, #actionButtons, #certificateButtons, #statisticsContainer {
         display: none !important;
       }
       
-      /* 隱藏報告容器內的標題和按鈕 */
       #allReportsContainer > .no-print {
         display: none !important;
       }
@@ -334,7 +325,9 @@
         <button type="button" id="cancelEvaluationButton" class="w-full text-gray-600 font-bold py-3 rounded-lg border-2 border-gray-300 hover:bg-gray-100 transition"> 返回主選單 </button>
       </div>
      </form>
-    </div><!-- 全部學生報告容器 -->
+    </div>
+    
+    <!-- 全部學生報告容器 -->
     <div id="allReportsContainer" class="bg-white rounded-2xl shadow-2xl p-8 mb-6" style="display: none;">
      <div class="text-center mb-4 no-print"><span class="jump-rope-character text-5xl">📚</span> <span class="star-decoration text-3xl ml-2">👨‍🏫</span> <span class="jump-rope-character text-5xl ml-2">📊</span>
      </div>
@@ -349,7 +342,7 @@
         <button id="printReportsButton" class="w-full bg-green-500 text-white font-bold py-4 rounded-lg shadow-lg transition transform hover:scale-105"> 🖨️ 列印全部證書 (A4) </button> 
         <button id="backFromReportsButton" class="w-full text-white font-bold py-4 rounded-lg shadow-lg transition transform hover:scale-105" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);"> 返回表單 </button>
      </div>
-     <!-- 報告列表 (這裡會顯示完整的 A4 證書) -->
+     <!-- 報告列表 -->
      <div id="reportsList" class="space-y-4 mb-6"></div>
     </div>
     
@@ -573,25 +566,55 @@
     </div>
    </div>
   </div>
-  <script>
+  <script type="module">
+    // --- 重要：請在此處填入您的 Firebase 設定 ---
+    // 1. 前往 https://console.firebase.google.com/
+    // 2. 建立新專案 -> 新增 Web 應用程式 -> 複製 config
+    // 3. 建立 Firestore 資料庫 (測試模式)
+    const firebaseConfig = {apiKey: "AIzaSyCcWjp_rbgsl-3e743AhwlEv3I4PgZM_gU",
+  authDomain: "pe-class-report.firebaseapp.com",
+  projectId: "pe-class-report",
+  storageBucket: "pe-class-report.firebasestorage.app",
+  messagingSenderId: "40898403106",
+  appId: "1:40898403106:web:e7138f6d973ff9b1e5637b",
+  measurementId: "G-1N8PPTFRSR"};
+    
+    // --- Firebase 模組載入 ---
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
+    import { getFirestore, collection, addDoc, onSnapshot, query, orderBy, Timestamp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
+
+    let db = null;
     let currentRecords = [];
     let tempExpectationData = null;
     let selectedClass = 'all';
     let reportsSelectedClass = 'all';
     let sortOption = 'date';
     
-    // 獨立版設定：不再依賴 window.elementSdk
-    const defaultConfig = {
-      primary_action_color: "#667eea",
-      secondary_action_color: "#764ba2"
-    };
-    
-    // 本地儲存金鑰
-    const STORAGE_KEY = 'jump_rope_app_data';
-
-    function initApp() {
-      // 載入本地資料
-      loadDataFromStorage();
+    async function initApp() {
+      // 初始化 Firebase
+      if (firebaseConfig.apiKey) {
+        try {
+          const app = initializeApp(firebaseConfig);
+          db = getFirestore(app);
+          console.log("Firebase initialized");
+          
+          // 監聽資料庫變更 (即時同步)
+          const q = query(collection(db, "reports"), orderBy("created_at", "desc"));
+          onSnapshot(q, (snapshot) => {
+             currentRecords = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+             updateClassFilter();
+             // 如果當前在統計或報告頁面，即時更新畫面
+             if (document.getElementById('statisticsContainer').style.display !== 'none') updateStatistics();
+             if (document.getElementById('allReportsContainer').style.display !== 'none') updateReportsList();
+          });
+        } catch (e) {
+          console.error("Firebase init error:", e);
+          showToast("資料庫連線失敗，請檢查設定", true);
+        }
+      } else {
+         console.warn("尚未設定 Firebase Config，目前無法儲存資料到雲端。");
+         showToast("請設定 Firebase 以啟用雲端功能", true);
+      }
 
       // 設定今天的日期
       const today = new Date().toISOString().split('T')[0];
@@ -681,29 +704,6 @@
             updateReportsList();
           });
       }
-      
-      // 初始化過濾器
-      updateClassFilter();
-    }
-    
-    // --- 本地儲存邏輯 ---
-    function loadDataFromStorage() {
-        try {
-            const data = localStorage.getItem(STORAGE_KEY);
-            currentRecords = data ? JSON.parse(data) : [];
-        } catch (e) {
-            console.error("讀取資料失敗", e);
-            currentRecords = [];
-        }
-    }
-    
-    function saveDataToStorage() {
-        try {
-            localStorage.setItem(STORAGE_KEY, JSON.stringify(currentRecords));
-        } catch (e) {
-            console.error("儲存資料失敗", e);
-            showToast("儲存失敗，請檢查瀏覽器設定", true);
-        }
     }
     
     // --- UI 邏輯 ---
@@ -802,7 +802,7 @@
       window.scrollTo({ top: 0, behavior: 'smooth' });
     }
 
-    function handleEvaluationSubmit(e) {
+    async function handleEvaluationSubmit(e) {
       e.preventDefault();
       if (!tempExpectationData) return;
       
@@ -829,12 +829,19 @@
         created_at: new Date().toISOString()
       };
 
-      // 儲存資料到本地
-      currentRecords.push(record);
-      saveDataToStorage();
-      
-      // 更新過濾器 (如果有新班級)
-      updateClassFilter();
+      // 儲存資料到雲端 (Firebase)
+      if (db) {
+         try {
+            await addDoc(collection(db, "reports"), record);
+            console.log("Document written to cloud");
+         } catch (e) {
+            console.error("Error adding document: ", e);
+            showToast("上傳失敗，請檢查網路", true);
+            return;
+         }
+      } else {
+         showToast("尚未設定資料庫，僅顯示預覽", true);
+      }
       
       // Update Certificate UI
       updateCertificateUI(record);
@@ -845,7 +852,7 @@
       document.getElementById('certificateButtons').style.display = 'block';
       document.getElementById('certificate').classList.add('show');
       
-      showToast('恭喜！證書已生成 🎉');
+      showToast('恭喜！證書已生成並上傳 🎉');
       window.scrollTo({ top: 0, behavior: 'smooth' });
     }
 
