@@ -160,24 +160,56 @@
       background: #667eea; /* Default color */
     }
     
+    /* Print Specific Styles - Fixes for A4 and Visibility */
     @media print {
-      .no-print {
-        display: none !important;
+      @page {
+        size: A4;
+        margin: 1cm;
       }
       
-      .report-card {
-        page-break-after: always;
-        box-shadow: none !important;
-        margin: 0 !important;
-        border: 1px solid #ddd;
-      }
-      
-      body {
+      body, html, .app-wrapper {
+        height: auto !important;
+        overflow: visible !important;
         background: white !important;
       }
       
       .app-wrapper {
-        background: white !important;
+        background: none !important;
+      }
+
+      .no-print {
+        display: none !important;
+      }
+      
+      /* 強制列印背景顏色 (Chrome/Safari) */
+      * {
+        -webkit-print-color-adjust: exact !important;
+        print-color-adjust: exact !important;
+      }
+
+      /* 確保報告容器在列印時正確顯示且寬度正確 */
+      #allReportsContainer, #statisticsContainer {
+        display: block !important;
+        box-shadow: none !important;
+        padding: 0 !important;
+        margin: 0 !important;
+        width: 100% !important;
+        max-width: none !important;
+        border: none !important;
+      }
+      
+      /* 讓列表項目不要被分頁切斷 */
+      .report-card {
+        break-inside: avoid;
+        page-break-inside: avoid;
+        border: 1px solid #ddd;
+        margin-bottom: 12px;
+        box-shadow: none !important;
+      }
+
+      /* 隱藏其他不相關的視圖 */
+      #expectationForm, #evaluationForm, #actionButtons, #certificateButtons {
+        display: none !important;
       }
     }
   </style>
@@ -187,7 +219,7 @@
   <div class="app-wrapper h-full w-full">
    <div class="container mx-auto px-4 py-8" style="max-width: 900px;"><!-- Toast 通知 -->
     <div id="toast" class="toast"></div><!-- 第一階段：課前期望表單 -->
-    <div id="expectationForm" class="bg-white rounded-2xl shadow-2xl p-8 mb-6 no-print">
+    <div id="expectationForm" class="bg-white rounded-2xl shadow-2xl p-8 mb-6 no-print-section">
      <div class="text-center mb-4"><span class="jump-rope-character text-6xl">🤸</span> <span class="rope-animation text-4xl ml-2">➰</span> <span class="star-decoration text-3xl ml-2">✨</span>
      </div>
      <h1 id="formTitle" class="text-4xl font-bold text-center mb-2" style="color: #2d3748;">跳繩課堂 - 課前期望</h1>
@@ -220,7 +252,7 @@
     </div>
     
     <!-- 第二階段：課後自我評估表單 -->
-    <div id="evaluationForm" class="bg-white rounded-2xl shadow-2xl p-8 mb-6 no-print" style="display: none;">
+    <div id="evaluationForm" class="bg-white rounded-2xl shadow-2xl p-8 mb-6 no-print-section" style="display: none;">
      <div class="text-center mb-4"><span class="jump-rope-character text-6xl">🏃</span> <span class="rope-animation text-4xl ml-2">➰</span> <span class="text-4xl ml-2">💪</span>
      </div>
      <h2 class="text-3xl font-bold text-center mb-2" style="color: #2d3748;">課後自我評估</h2>
@@ -265,26 +297,30 @@
       </div>
      </form>
     </div><!-- 全部學生報告容器 -->
-    <div id="allReportsContainer" class="bg-white rounded-2xl shadow-2xl p-8 mb-6 no-print" style="display: none;">
-     <div class="text-center mb-4"><span class="jump-rope-character text-5xl">📚</span> <span class="star-decoration text-3xl ml-2">👨‍🏫</span> <span class="jump-rope-character text-5xl ml-2">📊</span>
+    <div id="allReportsContainer" class="bg-white rounded-2xl shadow-2xl p-8 mb-6" style="display: none;">
+     <div class="text-center mb-4 no-print"><span class="jump-rope-character text-5xl">📚</span> <span class="star-decoration text-3xl ml-2">👨‍🏫</span> <span class="jump-rope-character text-5xl ml-2">📊</span>
      </div>
      <h2 class="text-3xl font-bold text-center mb-6" style="color: #2d3748;">全部學生報告</h2><!-- 控制面板 -->
-     <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+     <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6 no-print">
       <div><label for="reportsClassFilter" class="block text-sm font-semibold text-gray-700 mb-2">選擇班級</label> <select id="reportsClassFilter" class="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:border-purple-500 focus:outline-none transition"> <option value="all">全部班級</option> </select>
       </div>
       <div><label for="sortOption" class="block text-sm font-semibold text-gray-700 mb-2">排序方式</label> <select id="sortOption" class="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:border-purple-500 focus:outline-none transition"> <option value="date">日期（最新優先）</option> <option value="name">姓名（A-Z）</option> <option value="total">總分（高至低）</option> <option value="achievement">達成率（高至低）</option> </select>
       </div>
-     </div><button id="printReportsButton" class="w-full bg-green-500 text-white font-bold py-4 rounded-lg shadow-lg transition transform hover:scale-105 mb-6"> 🖨️ 列印全部報告 </button> <button id="backFromReportsButton" class="w-full text-white font-bold py-4 rounded-lg shadow-lg transition transform hover:scale-105 mb-6" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);"> 返回表單 </button>
+     </div>
+     <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6 no-print">
+        <button id="printReportsButton" class="w-full bg-green-500 text-white font-bold py-4 rounded-lg shadow-lg transition transform hover:scale-105"> 🖨️ 列印全部報告 (A4) </button> 
+        <button id="backFromReportsButton" class="w-full text-white font-bold py-4 rounded-lg shadow-lg transition transform hover:scale-105" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);"> 返回表單 </button>
+     </div>
      <!-- 報告列表 -->
      <div id="reportsList" class="space-y-4 mb-6"><!-- 報告卡片動態生成 --></div>
     </div>
     
     <!-- 統計資料容器 -->
-    <div id="statisticsContainer" class="bg-white rounded-2xl shadow-2xl p-8 mb-6 no-print" style="display: none;">
+    <div id="statisticsContainer" class="bg-white rounded-2xl shadow-2xl p-8 mb-6" style="display: none;">
      <div class="text-center mb-4"><span class="jump-rope-character text-5xl">👥</span> <span class="star-decoration text-3xl ml-2">📈</span> <span class="jump-rope-character text-5xl ml-2">📋</span>
      </div>
      <h2 class="text-3xl font-bold text-center mb-6" style="color: #2d3748;">班級統計資料</h2><!-- 班級篩選 -->
-     <div class="mb-6"><label for="classFilter" class="block text-sm font-semibold text-gray-700 mb-2">選擇班級</label> <select id="classFilter" class="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:border-purple-500 focus:outline-none transition"> <option value="all">全部班級</option> </select>
+     <div class="mb-6 no-print"><label for="classFilter" class="block text-sm font-semibold text-gray-700 mb-2">選擇班級</label> <select id="classFilter" class="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:border-purple-500 focus:outline-none transition"> <option value="all">全部班級</option> </select>
      </div><!-- 統計摘要卡片 -->
      <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
       <div class="stat-card bg-gradient-to-br from-blue-500 to-blue-600 rounded-xl p-6 text-white shadow-lg">
@@ -411,7 +447,10 @@
         </div>
        </div>
       </div>
-     </div><button id="backToFormButton" class="w-full text-white font-bold py-4 rounded-lg shadow-lg transition transform hover:scale-105" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);"> 返回表單 </button>
+     </div>
+     <div class="no-print">
+        <button id="backToFormButton" class="w-full text-white font-bold py-4 rounded-lg shadow-lg transition transform hover:scale-105" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);"> 返回表單 </button>
+     </div>
     </div><!-- 證書顯示 -->
     <div id="certificate" class="certificate rounded-2xl shadow-2xl mb-6 no-print" style="background: white; border: 4px solid #667eea; width: 210mm; max-width: 100%; aspect-ratio: 210/297; margin-left: auto; margin-right: auto; padding: 40px; box-sizing: border-box; overflow-y: auto; position: relative; display: none;">
      <div class="text-center mb-6">
